@@ -1,8 +1,10 @@
 package com.example.chatbot;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.messages.AssistantMessage;
@@ -36,54 +38,34 @@ public class ChatController {
 		messages.add(new UserMessage(request.message()));
 
 		List<Message> fullMessages = new ArrayList<>();
-		fullMessages.add(new SystemMessage(
-			"You are a helpful assistant. Reply in 1-3 sentences only. Never show your planning, reasoning, options, steps, or framework. Just answer the question directly and naturally."));
+		fullMessages.add(new SystemMessage("Answer the question directly and concisely."));
 		fullMessages.addAll(messages);
 
-		String reply = chatClient.prompt().messages(fullMessages).call().content();
-		reply = stripAllPlanning(reply);
+		String rawReply = chatClient.prompt().messages(fullMessages).call().content();
+		String cleanReply = stripLeadingReasoning(rawReply);
 
-		messages.add(new AssistantMessage(reply));
+		messages.add(new AssistantMessage(cleanReply));
 
-		return new ChatResponse(reply);
+		return new ChatResponse(cleanReply);
 	}
 
-	private String stripAllPlanning(String text) {
-		// Remove meta-labels and framework
-		String cleaned = text
-			.replaceAll("(?i)Question:\\s*", "")
-			.replaceAll("(?i)Answer:\\s*", "")
-			// Remove planning sections
-			.replaceAll("(?mi)(Plan|Option|Step|Note|Reason|Think|Consider)\\s*:.*", "")
-			// Remove bullet-list planning (2+ consecutive)
-			.replaceAll("(?m)(^[•*\\-]\\s+[^\\n]*\\n?){2,}", "")
-			// Remove meta-text opening lines
-			.replaceAll("(?i)^(The user|This is|Here's?|Let me).*?\\.\\s*", "")
-			.trim();
+	private static final Pattern REASONING_OPENER = Pattern.compile(
+		"^(the\\s+(user|question|text|instructions?|prompt|system)\\b).*", Pattern.CASE_INSENSITIVE);
 
-		// Split into sentences and take first 3
-		String[] sentences = cleaned.split("(?<=[.!?])\\s+");
-		StringBuilder result = new StringBuilder();
-		int count = 0;
+	private String stripLeadingReasoning(String rawReply) {
+		String trimmed = rawReply.trim();
+		String[] sentences = trimmed.split("(?<=[.!?])\\s+");
 
-		for (String sent : sentences) {
-			String trimmed = sent.trim();
-
-			// Skip meta/planning sentences
-			if (trimmed.matches("(?i).*(Plan|Option|Step|Note|Reason).*") ||
-				trimmed.matches("(?i).*(Confidence|Mental|Sandbox).*") ||
-				trimmed.matches("^[•*\\-].*") ||
-				trimmed.length() < 5) {
-				continue;
-			}
-
-			result.append(trimmed).append(" ");
-			count++;
-			if (count >= 3) break;
+		int start = 0;
+		while (start < sentences.length && REASONING_OPENER.matcher(sentences[start].trim()).matches()) {
+			start++;
 		}
 
-		String answer = result.toString().trim();
-		return answer.isEmpty() ? "I'm here to help!" : answer;
+		if (start == 0 || start >= sentences.length) {
+			return trimmed;
+		}
+
+		return String.join(" ", Arrays.asList(sentences).subList(start, sentences.length)).trim();
 	}
 
 	record ChatRequest(String conversationId, String message) {
