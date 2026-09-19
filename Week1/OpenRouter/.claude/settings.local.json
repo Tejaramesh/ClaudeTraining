@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn -q package)",
+      "Bash(java -cp target/classes org.example.OpenRouterClient)",
+      "Bash(mvn -q compile)"
+    ]
+  }
+}

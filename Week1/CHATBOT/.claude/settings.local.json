@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(awk '{print $2}')",
+      "Bash(xargs kill)",
+      "Bash(java -jar target/chatbot-1.0.0.jar)",
+      "Bash(curl -s -X POST http://localhost:8081/api/chat -H 'Content-Type: application/json' -d '{\"conversationId\":\"test\",\"message\":\"Hello\"}')",
+      "Bash(kill %1)",
+      "Bash(curl -s -X POST http://localhost:8081/api/chat -H \"Content-Type: application/json\" -d '{\"conversationId\":\"test\",\"message\":\"Hello\"}')",
+      "Read(//tmp/**)",
+      "Bash(pkill -f \"chatbot\")",
+      "Bash(pkill -f \"java -jar target/chatbot\")",
+      "Bash(lsof -ti:8081)",
+      "Bash(xargs kill -9)"
+    ]
+  }
+}
